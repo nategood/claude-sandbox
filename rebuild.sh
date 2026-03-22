@@ -1,0 +1,5 @@
+#!/bin/bash
+cd "$(dirname "$0")"
+docker compose down
+docker compose build --no-cache
+echo "Rebuilt. Run ./start.sh to launch."
