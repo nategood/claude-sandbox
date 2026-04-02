@@ -37,9 +37,9 @@ Environment variables can be set in `.env` or passed inline:
 
 | Variable | Description | Default |
 |---|---|---|
-| `ANTHROPIC_API_KEY` | Your Anthropic API key | (required) |
+| `ANTHROPIC_API_KEY` | Anthropic API key (or just authenticate with Claude Max subscription) | — |
 | `PROJECT_DIR` | Host directory to mount at `/workspace` | `.` |
-| `HOST_PORTS` | Comma-separated ports/ranges to allow to the host | `5432,6379,3000,4000,4532,5100,5200` |
+| `HOST_PORTS` | Comma-separated ports/ranges to allow to the host | `3000,4000,8000,8080` |
 
 ```bash
 # Example: override host ports at runtime
