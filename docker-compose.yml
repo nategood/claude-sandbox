@@ -11,7 +11,7 @@ services:
       - "host.docker.internal:host-gateway"
     environment:
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
-      - HOST_PORTS=${HOST_PORTS:-5432,6379,3000,4000,4532,5100}
+      - HOST_PORTS=${HOST_PORTS:-3000,4000,8000,8080}
       - CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1
     volumes:
       - ${PROJECT_DIR:-.}:/workspace

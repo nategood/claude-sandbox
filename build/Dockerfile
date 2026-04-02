@@ -21,5 +21,10 @@ RUN chmod +x /usr/local/bin/init-firewall.sh
 RUN echo "node ALL=(root) NOPASSWD: /usr/local/bin/init-firewall.sh" > /etc/sudoers.d/node-firewall \
     && chmod 0440 /etc/sudoers.d/node-firewall
 
+RUN npx playwright install-deps chromium
+RUN npm install -g playwright
+
 USER node
+RUN npx playwright install chromium
+
 WORKDIR /workspace

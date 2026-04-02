@@ -68,7 +68,7 @@ if [ -z "$HOST_IP" ] && command -v ip &>/dev/null; then
     HOST_IP=$(ip route | grep default | awk '{print $3}' | head -1) || true
 fi
 
-DEFAULT_HOST_PORTS="5432,6379,3000,4000,4532,5100"
+DEFAULT_HOST_PORTS="3000,4000,8000,8080"
 HOST_PORTS="${HOST_PORTS:-$DEFAULT_HOST_PORTS}"
 
 if [ -n "$HOST_IP" ]; then
