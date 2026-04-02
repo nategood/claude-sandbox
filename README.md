@@ -5,15 +5,14 @@ A Docker-based sandbox for running [Claude Code](https://docs.anthropic.com/en/d
 ## Quick Start
 
 ```bash
-# 1. Add your API key
-cp .env.example .env
-# Edit .env and add your ANTHROPIC_API_KEY
-
-# 2. Start the sandbox with a project mounted
+# 1. Start the sandbox with a project mounted
 PROJECT_DIR=~/projects/my-app ./start.sh
 
-# 3. Enter the sandbox
+# 2. Enter the sandbox
 ./shell.sh
+
+# 3. Authenticate (if not using an API key)
+# Claude Code will prompt you to log in with your Claude subscription
 ```
 
 ## What's Included
@@ -65,4 +64,4 @@ On environments where iptables is unavailable (e.g. Docker Desktop on macOS/Wind
 
 ## License
 
-MIT
+[MIT](LICENSE)
