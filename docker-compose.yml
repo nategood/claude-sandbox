@@ -22,7 +22,7 @@ services:
     stdin_open: true
     tty: true
     command: |
-      bash -c "sudo /usr/local/bin/init-firewall.sh && exec zsh"
+      bash -c "sudo -E /usr/local/bin/init-firewall.sh && exec zsh"
 
 volumes:
   claude-config:

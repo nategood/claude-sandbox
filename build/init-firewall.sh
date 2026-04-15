@@ -59,35 +59,55 @@ ipt -A OUTPUT -p tcp --dport 80 -j ACCEPT
 # ==========================================================================
 # HOST PORT ACCESS — supports ports and ranges: "5432,6379,8000:8100"
 # ==========================================================================
-HOST_IP=""
-if getent hosts host.docker.internal &>/dev/null; then
-    # getent may return IPv6 — iptables only handles IPv4, so filter for it
-    HOST_IP=$(getent hosts host.docker.internal | awk '{print $1}' | grep -E '^[0-9]+\.' | head -1)
+HOST_IPS=()
+
+# /etc/hosts is the most reliable source on Docker Desktop (extra_hosts: host-gateway)
+if grep -q host.docker.internal /etc/hosts 2>/dev/null; then
+    while IFS= read -r ip; do
+        HOST_IPS+=("$ip")
+    done < <(grep host.docker.internal /etc/hosts | awk '{print $1}' | grep -E '^[0-9]+\.')
 fi
-if [ -z "$HOST_IP" ] && command -v ip &>/dev/null; then
-    HOST_IP=$(ip route | grep default | awk '{print $3}' | head -1) || true
+
+# Fallback: getent (may return IPv6, so filter)
+if [ ${#HOST_IPS[@]} -eq 0 ] && getent hosts host.docker.internal &>/dev/null; then
+    while IFS= read -r ip; do
+        HOST_IPS+=("$ip")
+    done < <(getent hosts host.docker.internal | awk '{print $1}' | grep -E '^[0-9]+\.')
+fi
+
+# Also add default gateway if it's a different IP (bridge network)
+if command -v ip &>/dev/null; then
+    gw=$(ip route | grep default | awk '{print $3}' | head -1) || true
+    if [ -n "$gw" ]; then
+        already=false
+        for existing in "${HOST_IPS[@]}"; do
+            [ "$existing" = "$gw" ] && already=true
+        done
+        $already || HOST_IPS+=("$gw")
+    fi
 fi
 
 DEFAULT_HOST_PORTS="3000,4000,8000,8080"
 HOST_PORTS="${HOST_PORTS:-$DEFAULT_HOST_PORTS}"
 
-if [ -n "$HOST_IP" ]; then
-    echo "  Host: $HOST_IP"
-    # Allow ICMP to host for diagnostics (ping)
-    ipt -A OUTPUT -d "$HOST_IP" -p icmp -j ACCEPT 2>&1 || echo "  ⚠️  ICMP rule failed"
-    IFS=',' read -ra PORTS <<< "$HOST_PORTS"
-    for spec in "${PORTS[@]}"; do
-        spec=$(echo "$spec" | tr -d '[:space:]')
-        [ -z "$spec" ] && continue
-        if ipt -A OUTPUT -d "$HOST_IP" -p tcp --dport "$spec" -j ACCEPT 2>&1; then
-            [[ "$spec" == *":"* ]] && echo "  ✅ host:$spec (range)" || echo "  ✅ host:$spec"
-        else
-            echo "  ❌ host:$spec — iptables rule failed"
-        fi
+if [ ${#HOST_IPS[@]} -gt 0 ]; then
+    echo "  Host IPs: ${HOST_IPS[*]}"
+    for HOST_IP in "${HOST_IPS[@]}"; do
+        ipt -A OUTPUT -d "$HOST_IP" -p icmp -j ACCEPT 2>&1 || echo "  ⚠️  ICMP rule failed for $HOST_IP"
+        IFS=',' read -ra PORTS <<< "$HOST_PORTS"
+        for spec in "${PORTS[@]}"; do
+            spec=$(echo "$spec" | tr -d '[:space:]')
+            [ -z "$spec" ] && continue
+            if ipt -A OUTPUT -d "$HOST_IP" -p tcp --dport "$spec" -j ACCEPT 2>&1; then
+                [[ "$spec" == *":"* ]] && echo "  ✅ $HOST_IP:$spec (range)" || echo "  ✅ $HOST_IP:$spec"
+            else
+                echo "  ❌ $HOST_IP:$spec — iptables rule failed"
+            fi
+        done
     done
 else
     echo "  ⚠️  Could not resolve host IP — host port access will not work"
-    echo "     Tried: getent hosts host.docker.internal, default gateway"
+    echo "     Tried: /etc/hosts, getent, default gateway"
 fi
 
 # ==========================================================================
@@ -124,18 +144,18 @@ else
     echo "  ✅ non-HTTP traffic blocked"
 fi
 
-# Validate host connectivity
-if [ -n "$HOST_IP" ]; then
+# Validate host connectivity (test against first IP only)
+if [ ${#HOST_IPS[@]} -gt 0 ]; then
+    TEST_IP="${HOST_IPS[0]}"
     echo ""
-    echo "  Host connectivity ($HOST_IP):"
+    echo "  Host connectivity ($TEST_IP):"
     IFS=',' read -ra PORTS <<< "$HOST_PORTS"
     for spec in "${PORTS[@]}"; do
         spec=$(echo "$spec" | tr -d '[:space:]')
         [ -z "$spec" ] && continue
-        # For ranges, just test the first port
         test_port="${spec%%:*}"
-        if curl -sf --max-time 2 --connect-timeout 2 -o /dev/null "http://$HOST_IP:$test_port" 2>/dev/null || \
-           bash -c "echo >/dev/tcp/$HOST_IP/$test_port" 2>/dev/null; then
+        if curl -sf --max-time 2 --connect-timeout 2 -o /dev/null "http://$TEST_IP:$test_port" 2>/dev/null || \
+           bash -c "echo >/dev/tcp/$TEST_IP/$test_port" 2>/dev/null; then
             echo "  ✅ host:$test_port reachable"
         else
             echo "  ⚠️  host:$test_port not reachable (service may not be running)"
