@@ -1,0 +1,13 @@
+# Uses claude-sandbox to run claude in a container - requires an argument
+calvin() {
+  if [[ -z "$1" ]]; then
+    echo "Usage: calvin <project_dir>"
+    return 1
+  fi
+
+  cd ~/Code/claude-sandbox || return
+
+  PROJECT_DIR="$1" sh ./start.sh &&
+  sh ./shell.sh
+}
+

@@ -3,7 +3,6 @@ services:
     build:
       context: build
       dockerfile: Dockerfile
-    container_name: claude-sandbox
     cap_add: [NET_ADMIN, NET_RAW]
     sysctls:
       - net.ipv6.conf.all.disable_ipv6=1
